@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34221.43
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CMSProjekt", "CMSProjekt.csproj", "{AB0A2B2B-1815-46A6-ABC5-C8BF06C77172}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CMSProjekt", "CMSProjekt.csproj", "{AB0A2B2B-1815-46A6-ABC5-C8BF06C77172}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

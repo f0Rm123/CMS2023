@@ -1,4 +1,7 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using CMSProjekt.dbcontext
+@inject AppDbContext dbContext
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">CMSProjekt</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -9,28 +12,47 @@
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="oi oi-home" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="oi oi-plus" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="fetchdata">
-                <span class="oi oi-list-rich" aria-hidden="true"></span> Fetch data
-            </NavLink>
-        </div>
+        <MudPaper Width="250px" Class="py-3" Elevation="0"> @*Spójrz jak jest u ciebie*@
+            <MudNavMenu>
+                @foreach (var navPage in dbContext.Pages.Where(a => a.Visible))
+                {
+                    if(dbContext.Pages.Where(a => a.ParentPageId == navPage.Id).Any())
+                    {
+                        <MudNavGroup Title="@navPage.Title">
+                            @foreach (var childPage in dbContext.Pages.Where(a => a.ParentPageId == navPage.Id))
+                            {
+                                string childPagePath = "/content/" + childPage.Path;
+                                <MudNavLink Href="@childPagePath">@childPage.Title</MudNavLink>
+                            }
+                        </MudNavGroup>
+                    }
+                    else if(navPage.ParentPageId == -1)
+                    {
+                        string pagePath = "/content/" + navPage.Path;
+                        <MudNavLink Href="@pagePath">@navPage.Title</MudNavLink>
+                    }
+                }
+                <MudNavLink OnClick="() => Test()">@number</MudNavLink>
+                <MudNavGroup Title="Settings">
+                    <MudNavLink OnClick="() => Test()">Users</MudNavLink>
+                    <MudNavLink OnClick="() => Test()">Security</MudNavLink>
+                </MudNavGroup>
+            </MudNavMenu>
+        </MudPaper>
     </nav>
 </div>
 
 @code {
+    //private Index // page?
+    private int number = 0;
     private bool collapseNavMenu = true;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void Test()
+    {
+        number++;
+    }
 
     private void ToggleNavMenu()
     {

@@ -1,9 +1,169 @@
-﻿@page "/"
+﻿@using CMSProjekt.Dialogs;
+@using CMSProjekt.Models;
+@using CMSProjekt.dbcontext
+@using Microsoft.EntityFrameworkCore;
+@inject AppDbContext dbContext
+@inject NavigationManager navManager
+@inject IDialogService dialogService
+@implements IDisposable
 
-<PageTitle>Index</PageTitle>
+@page "/"
+@page "/content/{PagePath}"
 
-<h1>Hello, world!</h1>
 
-Welcome to your new app.
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+<PageTitle>@pageTitle</PageTitle>
+
+@if(startPage)
+{
+    <MudText>Witaj na stronie głównej</MudText>
+}
+else if(pageExists)
+{
+    if(pageElements is not null)
+    {
+        foreach (var element in pageElements)
+        {
+            <MudStack Row>
+                @if(element.Text is not null)
+                {
+                    if(element.Text.IsBold)
+                    {
+                        <MudText Style="@($"color: {element.Text.Color};font-weight: bold")" >@element.Text.TextString</MudText>
+                    }
+                    else
+                    {
+                        <MudText Style="@($"color: {element.Text.Color};")">@element.Text.TextString</MudText>
+                    }
+                }
+                else if(element.Image is not null)
+                {
+
+                }
+                else if(element.Table is not null)
+                {
+
+                }
+                else if(element.File is not null)
+                {
+
+                }
+                else
+                {
+                    throw new Exception("Nieznany element");
+                }
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Info" OnClick="() => MoveElementUpDialog(element)"/>
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Info" OnClick="() => MoveElementDownDialog(element)"/>
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => ShowDeleteElementDialog(element)"/>
+            </MudStack>
+        }
+    }
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" OnClick="ShowAddElementDialog">Dodaj element</MudButton>
+}
+
+@code {
+    [Parameter]
+    public string PagePath { get; set; }
+    private string pageTitle = string.Empty;
+    private int pageId;
+    private bool pageExists = false;
+    private bool startPage = false;
+    private ICollection<PageElement> pageElements;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        UpdatePage();
+        navManager.LocationChanged += UpdatePage;
+    }
+
+    void UpdatePage(object sender, EventArgs e) => UpdatePage();
+
+    void UpdatePage()
+    {
+        if (!string.IsNullOrEmpty(PagePath))
+        {
+            var pages = dbContext.Pages.Where(a => a.Path == PagePath);
+            if (pages.Any())
+            {
+                pageElements = dbContext.PageElements
+                                        .Include(a => a.Text)
+                                        .Include(a => a.Image)
+                                        .Include(a => a.File)
+                                        .Include(a => a.Table)
+                                        .Where(a => a.Page == pages.First())
+                                        .OrderBy(a => a.OrderNumber)
+                                        .ToList();
+                pageTitle = pages.First().Title;
+                pageId = pages.First().Id;
+                pageExists = true;
+                startPage = false;
+            }
+        }
+        else
+        {
+            startPage = true;
+            pageTitle = "Strona główna";
+        }
+        StateHasChanged();
+    }
+
+    async Task ShowAddElementDialog()
+    {
+        var parameters = new DialogParameters<AddElementDialog>();
+        parameters.Add("PageId", pageId);
+        var dialog = await dialogService.ShowAsync<AddElementDialog>("Dodawanie elementu", parameters);
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+            UpdatePage();
+    }
+
+    void MoveElementUpDialog(PageElement element)
+    {
+        var pageElementsHigher = pageElements.Where(a => a.OrderNumber < element.OrderNumber);
+        if(pageElementsHigher.Count() > 0)
+        {
+            var elementToSwap = pageElementsHigher.Last();
+            int prevElementOrder = element.OrderNumber;
+            element.OrderNumber = elementToSwap.OrderNumber;
+            elementToSwap.OrderNumber = prevElementOrder;
+        }
+        dbContext.SaveChanges();
+        UpdatePage();
+    }
+
+    void MoveElementDownDialog(PageElement element)
+    {
+        var pageElementsLower = pageElements.Where(a => a.OrderNumber > element.OrderNumber);
+        if (pageElementsLower.Count() > 0)
+        {
+            var elementToSwap = pageElementsLower.First();
+            int prevElementOrder = element.OrderNumber;
+            element.OrderNumber = elementToSwap.OrderNumber;
+            elementToSwap.OrderNumber = prevElementOrder;
+        }
+        dbContext.SaveChanges();
+        UpdatePage();
+    }
+
+    async Task ShowDeleteElementDialog(PageElement element)
+    {
+        var parameters = new DialogParameters<SimpleAcceptDialog>();
+        parameters.Add("ContentText", "Czy na pewno chcesz usunąć ten element?");
+        parameters.Add("AcceptText", "Tak, usuń");
+        parameters.Add("CancelText", "Nie, zachowaj");
+        var dialog = await dialogService.ShowAsync<SimpleAcceptDialog>("Usuwanie elementu", parameters);
+        var result = await dialog.Result;
+        if(!result.Cancelled)
+        {
+            dbContext.PageElements.Where(a => a.Id == element.Id).ExecuteDelete();
+            dbContext.SaveChanges();
+        }
+        UpdatePage();
+    }
+
+    void IDisposable.Dispose()
+    {
+        navManager.LocationChanged -= UpdatePage;
+    }
+}

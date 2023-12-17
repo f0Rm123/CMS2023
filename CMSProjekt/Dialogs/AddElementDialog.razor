@@ -1,0 +1,141 @@
+﻿@using dbcontext
+@inject AppDbContext dbContext
+@inject NavigationManager navManager
+
+<MudPaper>
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">Dodawanie elementu</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudTabs @bind-ActivePanelIndex="@activePanelIndex" Rounded=" true" ApplyEffectsToContainer="true" PanelClass="pa-6" Centered="true">
+                
+                <MudTabPanel Text="Tekst">
+                    <MudTextField @bind-Value="@fieldText" @ref="@textField" ErrorText="Wprowadzony tekst nie może być pusty i musi być prawidłowy" Label="Podaj tekst" Variant="Variant.Outlined" />
+                    <MudColorPicker Label="Wybierz kolor tekstu" @bind-Text="@textColorValue" Style="@($"color: {textColorValue};")" />
+                    <MudCheckBox @bind-Checked="@isBoldChecked" Label="Czy pogrubiony" />
+                </MudTabPanel>
+                
+                <MudTabPanel Text="Obrazek">
+                    <MudFileUpload T="IBrowserFile" ErrorText="Musisz przesłać zdjęcie!" @ref="@fileField" @bind-Files="@file" Accept=".png, .jpg">
+                        <ButtonTemplate>
+                            <MudButton HtmlTag="label"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Image">
+                                Prześlij obrazek (.png, .jpg)
+                            </MudButton>
+                        </ButtonTemplate>
+                    </MudFileUpload>
+                    <MudTextField @bind-Value="@fieldText" @ref="@textField" Label="Podpis" Variant="Variant.Outlined" />
+                </MudTabPanel>
+                
+                <MudTabPanel Text="Plik">
+                    <MudText>tekst</MudText>
+                </MudTabPanel>
+                
+                <MudTabPanel Text="Tabela">
+                    <MudText>tekst</MudText>
+                </MudTabPanel>
+            
+            </MudTabs>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel" Color="Color.Error" Variant="Variant.Outlined">Anuluj</MudButton>
+            <MudButton OnClick="Add" Color="Color.Success" Variant="Variant.Filled">Dodaj</MudButton>
+        </DialogActions>
+    </MudDialog>
+</MudPaper>
+
+@code {
+    [CascadingParameter]
+    MudDialogInstance dialog { get; set; }
+    [Parameter, EditorRequired]
+    public int PageId { get; set; }
+    MudTextField<string> textField;
+    int activePanelIndex = 0;
+    bool isBoldChecked;
+    string fieldText = string.Empty;
+    string textColorValue = "#000000ff";
+    bool valid = false;
+    IBrowserFile? file;
+    MudFileUpload<IBrowserFile>? fileField;
+
+    void Add()
+    {
+        if (dbContext.Pages.Where(a => a.Id == PageId).First().PageElements is null)
+            dbContext.Pages.Where(a => a.Id == PageId).First().PageElements = new();
+        var pageElements = dbContext.Pages.Where(a => a.Id == PageId).First().PageElements;
+        int lastPageElementOrderNumber = 0;
+        if(pageElements.Count > 0)
+            lastPageElementOrderNumber = pageElements.Select(a => a.OrderNumber).Max();
+
+        switch(activePanelIndex)
+        {
+            case 0:
+                if(string.IsNullOrEmpty(fieldText))
+                {
+                    textField.Error = true;
+                }
+                else
+                {
+                    pageElements.Add(
+                        new Models.PageElement() 
+                        { 
+                            OrderNumber = lastPageElementOrderNumber + 1,
+                            Text = new() 
+                            { 
+                                TextString = fieldText,
+                                Color = textColorValue,
+                                IsBold = isBoldChecked
+                            },
+                            Image = null,
+                            File = null,
+                            Table = null
+                        });
+                    valid = true;
+                }
+                break;
+            case 1:
+                if(file == null)
+                {
+                    fileField.Error = true;
+                }
+                else
+                {
+                    // var buffer = new byte[file.Size];
+                    // file.OpenReadStream()
+                    pageElements.Add(
+                        new Models.PageElement()
+                            {
+                                OrderNumber = lastPageElementOrderNumber + 1,
+                                Text = null,
+                                Image = new Models.Image()
+                                {
+                                    Caption = fieldText,
+                                    //Data = file
+                                },
+                                File = null,
+                                Table = null
+                            });
+                    valid = true;
+                }
+                break;
+            case 2:
+                break;
+            case 3:
+                break;
+        }
+
+        if(valid)
+        {
+            dbContext.SaveChanges();
+            dialog.Close(DialogResult.Ok(true));
+        }
+    }
+
+    void Cancel()
+    {
+        dialog.Cancel();
+    }
+}
