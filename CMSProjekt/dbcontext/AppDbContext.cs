@@ -24,6 +24,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<PageElement>().HasOne(a => a.Image).WithOne(a => a.Element).HasForeignKey<Image>(a => a.ElementId).IsRequired();
         modelBuilder.Entity<PageElement>().HasOne(a => a.File).WithOne(a => a.Element).HasForeignKey<Models.File>(a => a.ElementId).IsRequired();
         modelBuilder.Entity<PageElement>().HasOne(a => a.Table).WithOne(a => a.Element).HasForeignKey<Table>(a => a.ElementId).IsRequired();
+        modelBuilder.Entity<Image>().Property(a => a.Caption).HasDefaultValue(string.Empty);
+        modelBuilder.Entity<Models.File>().Property(a => a.Caption).HasDefaultValue(string.Empty);
+        modelBuilder.Entity<Table>().Property(a => a.Caption).HasDefaultValue(string.Empty);
         //modelBuilder.Entity<PageElement>().Property(a => a.Text).HasDefaultValue(new Text() { Color = string.Empty, Id = -1, IsBold = false, TextString = string.Empty });
         //modelBuilder.Entity<PageElement>().Property(a => a.File).IsRequired(false);
         //modelBuilder.Entity<PageElement>().Property(a => a.Image).IsRequired(false);

@@ -11,38 +11,52 @@
             <MudTabs @bind-ActivePanelIndex="@activePanelIndex" Rounded=" true" ApplyEffectsToContainer="true" PanelClass="pa-6" Centered="true">
                 
                 <MudTabPanel Text="Tekst">
-                    <MudTextField @bind-Value="@fieldText" @ref="@textField" ErrorText="Wprowadzony tekst nie może być pusty i musi być prawidłowy" Label="Podaj tekst" Variant="Variant.Outlined" />
+                    <MudTextField @bind-Value="@textFieldText" @ref="@textTextFieldObject" ErrorText="Wprowadzony tekst nie może być pusty i musi być prawidłowy" Label="Podaj tekst" Variant="Variant.Outlined" />
                     <MudColorPicker Label="Wybierz kolor tekstu" @bind-Text="@textColorValue" Style="@($"color: {textColorValue};")" />
                     <MudCheckBox @bind-Checked="@isBoldChecked" Label="Czy pogrubiony" />
                 </MudTabPanel>
-                
+
                 <MudTabPanel Text="Obrazek">
-                    <MudFileUpload T="IBrowserFile" ErrorText="Musisz przesłać zdjęcie!" @ref="@fileField" @bind-Files="@file" Accept=".png, .jpg">
+                    <MudFileUpload T="IBrowserFile" @ref="@imageUploadField" FilesChanged="UploadImage" Accept=".png, .jpg" MaximumFileCount="1">
                         <ButtonTemplate>
                             <MudButton HtmlTag="label"
                                        Variant="Variant.Filled"
                                        Color="Color.Primary"
-                                       StartIcon="@Icons.Material.Filled.Image">
-                                Prześlij obrazek (.png, .jpg)
+                                       StartIcon="@Icons.Material.Filled.Image"
+                                       for="@context.Id">
+                                Prześlij obrazek (.png, .jpg) Max 30MB
                             </MudButton>
                         </ButtonTemplate>
                     </MudFileUpload>
-                    <MudTextField @bind-Value="@fieldText" @ref="@textField" Label="Podpis" Variant="Variant.Outlined" />
+                    <MudTextField @bind-Value="@imageFieldText" @ref="@imageTextFieldObject" Label="Podpis" Variant="Variant.Outlined" />
                 </MudTabPanel>
                 
                 <MudTabPanel Text="Plik">
-                    <MudText>tekst</MudText>
+                    <MudFileUpload T="IBrowserFile" @ref="@fileUploadField" FilesChanged="UploadFile" MaximumFileCount="1">
+                        <ButtonTemplate>
+                            <MudButton HtmlTag="label"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Folder"
+                                       for="@context.Id">
+                                Prześlij plik Max 30MB
+                            </MudButton>
+                        </ButtonTemplate>
+                    </MudFileUpload>
+                    <MudTextField @bind-Value="@fileFieldText" @ref="@fileTextFieldObject" Label="Opis" Variant="Variant.Outlined" />
                 </MudTabPanel>
                 
                 <MudTabPanel Text="Tabela">
-                    <MudText>tekst</MudText>
+                    <MudText>Podaj dane tabeli w formacie JSON. Dla ułatwienia można wykonać tabelę na stronie https://tableconvert.com/json-generator i skopiować wynikowy tekst JSON w pole danych</MudText>
+                    <MudTextField @bind-Value="@tableCaptionFieldText" @ref="@tableCaptionTextFieldObject" Label="Tytuł" Variant="Variant.Outlined" />
+                    <MudTextField @bind-Value="@tableFieldText" @ref="@tableTextFieldObject" Lines="10" AutoGrow="true" Label="Dane" Variant="Variant.Outlined" />
                 </MudTabPanel>
             
             </MudTabs>
         </DialogContent>
         <DialogActions>
             <MudButton OnClick="Cancel" Color="Color.Error" Variant="Variant.Outlined">Anuluj</MudButton>
-            <MudButton OnClick="Add" Color="Color.Success" Variant="Variant.Filled">Dodaj</MudButton>
+            <MudButton OnClick="Add" Color="Color.Primary" Variant="Variant.Filled">Dodaj</MudButton>
         </DialogActions>
     </MudDialog>
 </MudPaper>
@@ -52,14 +66,26 @@
     MudDialogInstance dialog { get; set; }
     [Parameter, EditorRequired]
     public int PageId { get; set; }
-    MudTextField<string> textField;
+    MudTextField<string> textTextFieldObject;
+    MudTextField<string> imageTextFieldObject;
+    MudTextField<string> fileTextFieldObject;
+    MudTextField<string> tableTextFieldObject;
+    MudTextField<string> tableCaptionTextFieldObject;
     int activePanelIndex = 0;
     bool isBoldChecked;
-    string fieldText = string.Empty;
+    string textFieldText = string.Empty;
+    string imageFieldText = string.Empty;
+    string fileFieldText = string.Empty;
+    string tableFieldText = string.Empty;
+    string tableCaptionFieldText = string.Empty;
     string textColorValue = "#000000ff";
     bool valid = false;
-    IBrowserFile? file;
-    MudFileUpload<IBrowserFile>? fileField;
+    IBrowserFile? imageFile;
+    IBrowserFile? fileFile;
+    byte[] bufferImageFile;
+    byte[] bufferFileFile;
+    MudFileUpload<IBrowserFile>? imageUploadField;
+    MudFileUpload<IBrowserFile>? fileUploadField;
 
     void Add()
     {
@@ -73,9 +99,9 @@
         switch(activePanelIndex)
         {
             case 0:
-                if(string.IsNullOrEmpty(fieldText))
+                if (string.IsNullOrEmpty(textFieldText))
                 {
-                    textField.Error = true;
+                    textTextFieldObject.Error = true;
                 }
                 else
                 {
@@ -85,7 +111,7 @@
                             OrderNumber = lastPageElementOrderNumber + 1,
                             Text = new() 
                             { 
-                                TextString = fieldText,
+                                    TextString = textFieldText,
                                 Color = textColorValue,
                                 IsBold = isBoldChecked
                             },
@@ -97,14 +123,13 @@
                 }
                 break;
             case 1:
-                if(file == null)
+                if(imageFile == null)
                 {
-                    fileField.Error = true;
+                    imageUploadField.ErrorText = "Musisz przesłać zdjęcie!";
+                    imageUploadField.Error = true;
                 }
                 else
                 {
-                    // var buffer = new byte[file.Size];
-                    // file.OpenReadStream()
                     pageElements.Add(
                         new Models.PageElement()
                             {
@@ -112,8 +137,8 @@
                                 Text = null,
                                 Image = new Models.Image()
                                 {
-                                    Caption = fieldText,
-                                    //Data = file
+                                    Caption = imageFieldText,
+                                    Data = bufferImageFile
                                 },
                                 File = null,
                                 Table = null
@@ -122,8 +147,58 @@
                 }
                 break;
             case 2:
+                if (fileFile == null)
+                {
+                    fileUploadField.ErrorText = "Musisz przesłać plik!";
+                    fileUploadField.Error = true;
+                }
+                else if (string.IsNullOrEmpty(fileFieldText))
+                {
+                    fileTextFieldObject.ErrorText = "Musisz wpisać opis pliku!";
+                    fileTextFieldObject.Error = true;
+                }
+                else
+                {
+                    pageElements.Add(
+                        new Models.PageElement()
+                            {
+                                OrderNumber = lastPageElementOrderNumber + 1,
+                                Text = null,
+                                Image = null,
+                                File = new Models.File()
+                                {
+                                    Caption = fileFieldText,
+                                    Name = fileFile.Name,
+                                    Data = bufferFileFile
+                                },
+                                Table = null
+                            });
+                    valid = true;
+                }
                 break;
             case 3:
+                if (string.IsNullOrEmpty(tableFieldText))
+                {
+                    tableTextFieldObject.ErrorText = "Podaj dane do tabeli!";
+                    tableTextFieldObject.Error = true;
+                }
+                else
+                {
+                    pageElements.Add(
+                        new Models.PageElement()
+                            {
+                                OrderNumber = lastPageElementOrderNumber + 1,
+                                Text = null,
+                                Image = null,
+                                File = null,
+                                Table = new Models.Table()
+                                {
+                                    Caption = tableCaptionFieldText,
+                                    ContentJSON = tableFieldText
+                                }
+                            });
+                    valid = true;
+                }
                 break;
         }
 
@@ -132,6 +207,47 @@
             dbContext.SaveChanges();
             dialog.Close(DialogResult.Ok(true));
         }
+    }
+
+    private async Task UploadImage(IBrowserFile image)
+    {
+        if (image.Size >= 31457280)
+        {
+            imageUploadField.ErrorText = "Plik przekracza 30MB!";
+            imageUploadField.Error = true;
+        }
+        else
+        {
+            await using MemoryStream fs = new();
+            await image.OpenReadStream(31457280).CopyToAsync(fs);
+            bufferImageFile = GetBytes(fs);
+            imageFile = image;
+        }
+    }
+
+    private async Task UploadFile(IBrowserFile file)
+    {
+        if (file.Size >= 31457280)
+        {
+            fileUploadField.ErrorText = "Plik przekracza 30MB!";
+            fileUploadField.Error = true;
+        }
+        else
+        {
+            await using MemoryStream fs = new();
+            await file.OpenReadStream(31457280).CopyToAsync(fs);
+            bufferFileFile = GetBytes(fs);
+            fileFile = file;
+        }
+    }
+
+    public static byte[] GetBytes(Stream stream)
+    {
+        var bytes = new byte[stream.Length];
+        stream.Seek(0, SeekOrigin.Begin);
+        stream.ReadAsync(bytes, 0, bytes.Length);
+        stream.Dispose();
+        return bytes;
     }
 
     void Cancel()

@@ -1,0 +1,66 @@
+﻿@using CMSProjekt.dbcontext
+@inject AppDbContext dbContext
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            Dodaj stronę
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudSelect T="string" @bind-Value="parentPageSelected" Label="Wybierz nadstronę" Variant="Variant.Outlined">
+            <MudSelectItem T="string" Value="noParentPageSelected" />
+            @foreach (var page in dbContext.Pages.Where(a => a.ParentPageId == -1))
+            {
+                <MudSelectItem T="string" Value="page.Title" />
+            }
+        </MudSelect>
+        <MudTextField @bind-Value="@pageTitle" @ref="@pageTitleField" Label="Tytuł" Variant="Variant.Outlined" />
+        <MudTextField @bind-Value="@pagePath" @ref="@pagePathField" Label="Ścieżka (URL)" Variant="Variant.Outlined" />
+        <MudCheckBox @bind-Checked="@isVisible" Label="Czy widoczna dla użytkowników" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Color="Color.Error">Anuluj</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Dodaj</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter]
+    MudDialogInstance dialog { get; set; }
+    string noParentPageSelected = "Brak";
+    string parentPageSelected;
+    string pageTitle = string.Empty;
+    string pagePath = string.Empty;
+    MudTextField<string> pageTitleField;
+    MudTextField<string> pagePathField;
+    bool isVisible = true;
+
+    void Submit()
+    {
+        if(string.IsNullOrEmpty(pageTitle))
+        {
+            pageTitleField.ErrorText = "Musisz wypełnić pole nazwy!";
+            pageTitleField.Error = true;
+        }
+        else if(string.IsNullOrEmpty(pagePath))
+        {
+            pagePathField.ErrorText = "Musisz wypełnić pole ścieżki!";
+            pagePathField.Error = true;
+        }
+        else
+        {
+            int parentPageId = parentPageSelected == noParentPageSelected ? -1 : dbContext.Pages.Where(a => a.Title == parentPageSelected).First().Id;
+            dbContext.Pages.Add(new Models.Page()
+            {
+                ParentPageId = parentPageId,
+                Path = pagePath,
+                Title = pageTitle,
+                Visible = isVisible
+            });
+            dbContext.SaveChanges();
+            dialog.Close(DialogResult.Ok(true));
+        }
+    }
+
+    void Cancel() => dialog.Cancel();
+}

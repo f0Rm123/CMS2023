@@ -2,6 +2,9 @@
 @using CMSProjekt.Models;
 @using CMSProjekt.dbcontext
 @using Microsoft.EntityFrameworkCore;
+@using System.Text.Json
+@using Newtonsoft.Json.Linq;
+@using Newtonsoft.Json;
 @inject AppDbContext dbContext
 @inject NavigationManager navManager
 @inject IDialogService dialogService
@@ -9,8 +12,6 @@
 
 @page "/"
 @page "/content/{PagePath}"
-
-
 
 <PageTitle>@pageTitle</PageTitle>
 
@@ -22,43 +23,75 @@ else if(pageExists)
 {
     if(pageElements is not null)
     {
-        foreach (var element in pageElements)
-        {
-            <MudStack Row>
-                @if(element.Text is not null)
-                {
-                    if(element.Text.IsBold)
+        <MudStack Spacing="3">
+            @foreach (var element in pageElements)
+            {
+                <MudStack Row AlignItems="AlignItems.Center">
+                    @if(element.Text is not null)
                     {
-                        <MudText Style="@($"color: {element.Text.Color};font-weight: bold")" >@element.Text.TextString</MudText>
+                        if(element.Text.IsBold)
+                        {
+                            <MudText Style="@($"color: {element.Text.Color};font-weight: bold")" >@element.Text.TextString</MudText>
+                        }
+                        else
+                        {
+                            <MudText Style="@($"color: {element.Text.Color};")">@element.Text.TextString</MudText>
+                        }
+                    }
+                    else if(element.Image is not null)
+                    {
+                        <figure>
+                            <img src="data:image/;base64, @Convert.ToBase64String(element.Image.Data)" />
+                            <figcaption>@element.Image.Caption</figcaption>
+                        </figure>
+                    }
+                    else if(element.Table is not null)
+                    {
+                        <MudTable Items="JsonConvert.DeserializeObject<List<JObject>>(element.Table.ContentJSON)" >
+                            <ToolBarContent>
+                                <MudText Color="Color.Primary" Typo="Typo.h6">@element.Table.Caption</MudText>
+                            </ToolBarContent>
+                            <HeaderContent>
+                                @foreach (string property in GetProperties(element.Table.ContentJSON))
+                                {
+                                    <MudTh>@property</MudTh>
+                                }
+                            </HeaderContent>
+                            <RowTemplate>
+                                @foreach (string property in GetProperties(element.Table.ContentJSON))
+                                {
+                                    <MudTd>
+                                        @context.GetValue(property)?.ToString()
+                                    </MudTd>
+                                }
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                    else if(element.File is not null)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary">
+                            <a href="data:text/;base64, @Convert.ToBase64String(element.File.Data)" download="@element.File.Name">Pobierz @element.File.Caption</a>
+                        </MudButton>
                     }
                     else
                     {
-                        <MudText Style="@($"color: {element.Text.Color};")">@element.Text.TextString</MudText>
+                        throw new Exception("Nieznany element");
                     }
-                }
-                else if(element.Image is not null)
-                {
 
-                }
-                else if(element.Table is not null)
-                {
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Info" Style="max-height: 45px; max-width: 45px" OnClick="() => MoveElementUpDialog(element)"/>
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Info" Style="max-height: 45px; max-width: 45px" OnClick="() => MoveElementDownDialog(element)"/>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Style="max-height: 45px; max-width: 45px" OnClick="() => ShowDeleteElementDialog(element)" />
+                </MudStack>
+            }
+        </MudStack>
 
-                }
-                else if(element.File is not null)
-                {
-
-                }
-                else
-                {
-                    throw new Exception("Nieznany element");
-                }
-                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Info" OnClick="() => MoveElementUpDialog(element)"/>
-                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Info" OnClick="() => MoveElementDownDialog(element)"/>
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => ShowDeleteElementDialog(element)"/>
-            </MudStack>
-        }
     }
     <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" OnClick="ShowAddElementDialog">Dodaj element</MudButton>
+}
+else
+{
+    <MudText>Nic tu nie ma! Na pocieszenie możesz poklikać buźkę, będzie szczęśliwsza!</MudText>
+    <MudIconButton Icon="@Icons.Material.Filled.AddReaction" Color="Color.Primary" Style="@NotFoundFaceStyle" OnClick="AddNotFoundFaceSize" />
 }
 
 @code {
@@ -69,12 +102,29 @@ else if(pageExists)
     private bool pageExists = false;
     private bool startPage = false;
     private ICollection<PageElement> pageElements;
+    private int NotFoundFaceSize = 25;
+    private string NotFoundFaceStyle
+    {
+        get
+        {
+            return $"width:{NotFoundFaceSize}px;height:{NotFoundFaceSize}px";
+        }
+    }
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
         UpdatePage();
         navManager.LocationChanged += UpdatePage;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        if(firstRender && startPage && dbContext.Pages.Where(a => a.Visible).Count() >= 1)
+        {
+            navManager.NavigateTo(navManager.BaseUri + "content/" + dbContext.Pages.Where(a => a.Visible).FirstOrDefault().Path);
+        }
     }
 
     void UpdatePage(object sender, EventArgs e) => UpdatePage();
@@ -160,6 +210,30 @@ else if(pageExists)
             dbContext.SaveChanges();
         }
         UpdatePage();
+    }
+
+    private static List<string> GetProperties(string stringData)
+    {
+        var localData = JsonConvert.DeserializeObject<List<JObject>>(stringData);
+        var properties = new List<string>();
+
+        foreach (JObject jObject in localData)
+        {
+            foreach (JProperty property in jObject.Properties())
+            {
+                if (!properties.Contains(property.Name))
+                {
+                    properties.Add(property.Name);
+                }
+            }
+        }
+        return properties;
+    }
+
+    void AddNotFoundFaceSize()
+    {
+        NotFoundFaceSize++;
+        StateHasChanged();
     }
 
     void IDisposable.Dispose()

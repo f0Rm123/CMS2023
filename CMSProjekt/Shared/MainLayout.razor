@@ -1,23 +1,97 @@
-﻿@inherits LayoutComponentBase
+﻿@using CMSProjekt.Dialogs;
+@using dbcontext
+@inject AppDbContext dbContext
+@inject NavigationManager navManager
+@inject IDialogService dialogService
+@inherits LayoutComponentBase
 
 <PageTitle>CMSProjekt</PageTitle>
 
-<MudThemeProvider />
+<MudThemeProvider @bind-IsDarkMode="@isDarkMode" Theme="@themeProvider.Theme"/>
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<div class="page">
-    <div class="sidebar">
+<MudLayout>
+    <MudAppBar Elevation="3" Style="@(isDarkMode ? "" : "background-color:var(--mud-palette-white)")" Dense="true">
+        <MudIconButton Title="Hide sidebar" Icon="@Icons.Material.Filled.Menu" Style="_theme.Palette.TextPrimary" Edge="Edge.Start" OnClick="@DrawerToggle" />
+        <MudSpacer />
+        <MudIconButton Title="Facebook" Icon="@Icons.Custom.Brands.Facebook" Style="_theme.Palette.TextPrimary" Edge="Edge.Start" OnClick="@NavigateToFacebook" />
+        <MudIconButton Title="Instagram" Icon="@Icons.Custom.Brands.Instagram" Style="_theme.Palette.TextPrimary" Edge="Edge.Start" OnClick="@NavigateToInstagram" />
+        @if(isAdmin)
+        {
+            <MudIconButton Title="Ustawienia" Icon="@Icons.Material.Filled.Settings" Style="_theme.Palette.TextPrimary" Edge="Edge.Start" OnClick="@ShowSettingsDialog" />
+        }
+        <MudIconButton Title="DarkMode" Icon="@Icons.Material.Filled.DarkMode" Style="_theme.Palette.TextPrimary" Edge="Edge.Start" OnClick="@DarkModeToggle" />
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="@drawerOpen" ClipMode="DrawerClipMode.Never" Breakpoint="Breakpoint.Md">
         <NavMenu />
-    </div>
+    </MudDrawer>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
-        </div>
+    <MudMainContent>
+        <MudPaper Class="pa-4 ma-2" Elevation="3">
+            <CascadingValue Value="@themeProvider">
+                @Body
+            </CascadingValue>
+            <MudScrollToTop>
+                <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowCircleUp" />
+            </MudScrollToTop>
+        </MudPaper>
+    </MudMainContent>
+</MudLayout>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+@code{
+    MudThemeProvider themeProvider;
+    bool drawerOpen = true;
+    bool isDarkMode = false;
+    bool isAdmin = true;
+
+    void DrawerToggle() => drawerOpen = !drawerOpen;
+    void DarkModeToggle() => isDarkMode = themeProvider.IsDarkMode = !isDarkMode;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        themeProvider = new();
+        themeProvider.Theme = new();
+        if (dbContext.Settings.Select(a => a.Name).Contains("themeColor"))
+        {
+            themeProvider.Theme.Palette = new()
+            {
+                Primary = dbContext.Settings.Where(a => a.Name == "themeColor").Select(a => a.Value).First()
+            };
+            themeProvider.Theme.PaletteDark = new()
+            {
+                Primary = dbContext.Settings.Where(a => a.Name == "themeColor").Select(a => a.Value).First()
+            };
+        }
+    }
+
+    void NavigateToFacebook()
+    {
+        var facebookLinkData = dbContext.Settings.Where(a => a.Name == "facebookLink").FirstOrDefault();
+
+        if(facebookLinkData is not null && Uri.IsWellFormedUriString(facebookLinkData.Value, UriKind.Absolute))
+            navManager.NavigateTo(facebookLinkData.Value);
+    }
+
+    void NavigateToInstagram()
+    {
+        var instagramLinkData = dbContext.Settings.Where(a => a.Name == "instagramLink").FirstOrDefault();
+
+        if (instagramLinkData is not null && Uri.IsWellFormedUriString(instagramLinkData.Value, UriKind.Absolute))
+            navManager.NavigateTo(instagramLinkData.Value);
+    }
+
+    async Task ShowSettingsDialog()
+    {
+        var parameters = new DialogParameters<SettingsDialog>();
+        parameters.Add("themeProvider", themeProvider);
+        var dialog = await dialogService.ShowAsync<SettingsDialog>("Zmiana ustawień", parameters);
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            navManager.NavigateTo(navManager.Uri, true);
+        }
+    }
+}

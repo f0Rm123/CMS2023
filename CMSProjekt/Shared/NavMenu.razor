@@ -1,57 +1,134 @@
-﻿@using CMSProjekt.dbcontext
+﻿@using CMSProjekt.Dialogs;
+@using CMSProjekt.dbcontext
+@using Microsoft.EntityFrameworkCore;
 @inject AppDbContext dbContext
+@inject IDialogService dialogService
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">CMSProjekt</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
-</div>
+<MudCard Style="width:240px" Elevation="3">
+    <MudCardContent Style="background-color:var(--mud-palette-primary);min-height:3rem;max-height:3rem;padding:9px 0;text-align:center;">
+        <MudText Typo="Typo.h6">
+            @pageTitle
+        </MudText>
+    </MudCardContent>
+</MudCard>
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="flex-column">
-        <MudPaper Width="250px" Class="py-3" Elevation="0"> @*Spójrz jak jest u ciebie*@
-            <MudNavMenu>
-                @foreach (var navPage in dbContext.Pages.Where(a => a.Visible))
-                {
-                    if(dbContext.Pages.Where(a => a.ParentPageId == navPage.Id).Any())
-                    {
-                        <MudNavGroup Title="@navPage.Title">
+<MudNavMenu Color="Color.Primary" Bordered="true" Rounded="true">
+    @foreach (var navPage in pages)
+    {
+        if(dbContext.Pages.Where(a => a.ParentPageId == navPage.Id).Any())
+        {
+            @if(isAdmin)
+            {
+                <MudStack Row Spacing="0">
+                    <b>
+                        <MudNavGroup Title="@navPage.Title" Style="max-width:145px" Expanded="true">
                             @foreach (var childPage in dbContext.Pages.Where(a => a.ParentPageId == navPage.Id))
                             {
                                 string childPagePath = "/content/" + childPage.Path;
-                                <MudNavLink Href="@childPagePath">@childPage.Title</MudNavLink>
+                                <MudStack Row Spacing="0">
+                                    <MudNavLink Href="@childPagePath" Style="min-width:145px"><b>@childPage.Title</b></MudNavLink>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" Style="max-height: 45px; max-width: 45px" OnClick="() => ShowEditPage(childPage.Id)" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Style="max-height: 45px; max-width: 45px" OnClick="() => ShowDeletePage(childPage.Id)" />
+                                </MudStack>
                             }
                         </MudNavGroup>
-                    }
-                    else if(navPage.ParentPageId == -1)
-                    {
-                        string pagePath = "/content/" + navPage.Path;
-                        <MudNavLink Href="@pagePath">@navPage.Title</MudNavLink>
-                    }
-                }
-                <MudNavLink OnClick="() => Test()">@number</MudNavLink>
-                <MudNavGroup Title="Settings">
-                    <MudNavLink OnClick="() => Test()">Users</MudNavLink>
-                    <MudNavLink OnClick="() => Test()">Security</MudNavLink>
-                </MudNavGroup>
-            </MudNavMenu>
-        </MudPaper>
-    </nav>
-</div>
+                    </b>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" Style="max-height: 45px; max-width: 45px" OnClick="() => ShowEditPage(navPage.Id)" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Style="max-height: 45px; max-width: 45px" OnClick="() => ShowDeletePage(navPage.Id)" />
+                </MudStack>
+            }
+            else
+            {
+                <b>
+                    <MudNavGroup Title="@navPage.Title">
+                        @foreach (var childPage in dbContext.Pages.Where(a => a.ParentPageId == navPage.Id))
+                        {
+                            string childPagePath = "/content/" + childPage.Path;
+                            <MudNavLink Href="@childPagePath"><b>@childPage.Title</b></MudNavLink>
+                        }
+                    </MudNavGroup>
+                </b>
+            }
+        }
+        else if(navPage.ParentPageId == -1)
+        {
+            string pagePath = "/content/" + navPage.Path;
+            @if(isAdmin)
+            {
+                <MudStack Row Spacing="0">
+                    <MudNavLink Href="@pagePath" Style="max-width:145px"><b>@navPage.Title</b></MudNavLink>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" Style="max-height: 45px; max-width: 45px" OnClick="() => ShowEditPage(navPage.Id)" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Style="max-height: 45px; max-width: 45px" OnClick="() => ShowDeletePage(navPage.Id)" />
+                </MudStack>
+            }
+            else
+            {
+                <MudNavLink Href="@pagePath"><b>@navPage.Title</b></MudNavLink>
+            }
+        }
+    }
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" OnClick="ShowAddPageDialog">Dodaj stronę</MudButton>
+</MudNavMenu>
 
 @code {
-    //private Index // page?
     private int number = 0;
     private bool collapseNavMenu = true;
+    string pageTitle = string.Empty;
+    bool isAdmin = true;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
-    private void Test()
+    IEnumerable<Models.Page> pages;
+
+    protected override void OnInitialized()
     {
-        number++;
+        base.OnInitialized();
+        if(isAdmin)
+        {
+            pages = dbContext.Pages;
+        }
+        else
+        {
+            pages = dbContext.Pages.Where(a => a.Visible);
+        }
+        if (dbContext.Settings.Select(a => a.Name).Contains("pageTitle"))
+            pageTitle = dbContext.Settings.Where(a => a.Name == "pageTitle").First().Value;
+        else
+            pageTitle = string.Empty;
+    }
+
+    private async Task ShowAddPageDialog()
+    {
+        var dialog = await dialogService.ShowAsync<AddPageDialog>("Dodawanie strony");
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+            StateHasChanged();
+    }
+
+    private async Task ShowEditPage(int id)
+    {
+        var parameters = new DialogParameters<EditPageDialog>();
+        parameters.Add("PageId", id);
+        var dialog = await dialogService.ShowAsync<EditPageDialog>("Edytowanie strony", parameters);
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+            StateHasChanged();
+    }
+
+    private async Task ShowDeletePage(int id)
+    {
+        var parameters = new DialogParameters<SimpleAcceptDialog>();
+        parameters.Add("ContentText", "Czy na pewno chcesz usunąć tę stronę i jeśli ma podstrony, je również?");
+        parameters.Add("AcceptText", "Tak, usuń");
+        parameters.Add("CancelText", "Nie, zachowaj");
+        var dialog = await dialogService.ShowAsync<SimpleAcceptDialog>("Usuwanie strony", parameters);
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            dbContext.Pages.Where(a => a.ParentPageId == id).ExecuteDelete();
+            dbContext.Pages.Where(a => a.Id == id).ExecuteDelete();
+            dbContext.SaveChanges();
+        }
     }
 
     private void ToggleNavMenu()

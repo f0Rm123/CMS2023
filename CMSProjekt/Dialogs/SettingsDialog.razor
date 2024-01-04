@@ -1,0 +1,96 @@
+﻿@using CMSProjekt.Models;
+@using dbcontext
+@inject AppDbContext dbContext
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Edytuj ustawienia główne strony</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudColorPicker Label="Wybierz kolor motywu" @bind-Text="@themePrimaryColor" Style="@($"color:{themePrimaryColor};")" />
+        <MudTextField @bind-Value="@pageTitle" Label="Tytuł strony widoczny na banerze" Variant="Variant.Outlined" />
+        <MudTextField @bind-Value="@facebookLink" Label="Link do Facebooka" Variant="Variant.Outlined" />
+        <MudTextField @bind-Value="@instagramLink" Label="Link do Instagrama" Variant="Variant.Outlined" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Color="Color.Error"></MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit"></MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    MudDialogInstance dialog { get; set; }
+    [Parameter, EditorRequired]
+    public MudThemeProvider themeProvider { get; set; }
+    public string pageTitle { get; set; }
+    public string facebookLink { get; set; }
+    public string instagramLink { get; set; }
+    string themePrimaryColor;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        themePrimaryColor = themeProvider.Theme.Palette.Primary.ToString();
+
+        if (dbContext.Settings.Select(a => a.Name).Contains("pageTitle"))
+            pageTitle = dbContext.Settings.Where(a => a.Name == "pageTitle").Select(a => a.Value).First();
+        else
+            pageTitle = string.Empty;
+
+        if (dbContext.Settings.Select(a => a.Name).Contains("facebookLink"))
+            facebookLink = dbContext.Settings.Where(a => a.Name == "facebookLink").Select(a => a.Value).First();
+        else
+            facebookLink = string.Empty;
+
+        if (dbContext.Settings.Select(a => a.Name).Contains("instagramLink"))
+            instagramLink = dbContext.Settings.Where(a => a.Name == "instagramLink").Select(a => a.Value).First();
+        else
+            instagramLink = string.Empty;
+    }
+
+    void Submit()
+    {
+        var existingSettings = dbContext.Settings.Select(a => a.Name);
+        if(!string.IsNullOrEmpty(themePrimaryColor))
+        {
+            themeProvider.Theme.Palette = new()
+            {
+                Primary = themePrimaryColor
+            };
+            themeProvider.Theme.PaletteDark = new()
+            {
+                Primary = themePrimaryColor
+            };
+            if (existingSettings.Contains("themeColor"))
+                dbContext.Settings.Where(a => a.Name == "themeColor").First().Value = themePrimaryColor;
+            else
+                dbContext.Settings.Add(new Settings() { Name = "themeColor", Value = themePrimaryColor });
+        }
+        if (existingSettings.Contains("pageTitle"))
+            dbContext.Settings.Where(a => a.Name == "pageTitle").First().Value = pageTitle;
+        else
+            dbContext.Settings.Add(new Settings() { Name = "pageTitle", Value = pageTitle });
+
+        if (Uri.IsWellFormedUriString(facebookLink, UriKind.Absolute))
+        {
+            if (existingSettings.Contains("facebookLink"))
+                dbContext.Settings.Where(a => a.Name == "facebookLink").First().Value = facebookLink;
+            else
+                dbContext.Settings.Add(new Settings() { Name = "facebookLink", Value = facebookLink });
+        }
+
+        if(Uri.IsWellFormedUriString(instagramLink, UriKind.Absolute))
+        {
+            if (existingSettings.Contains("instagramLink"))
+                dbContext.Settings.Where(a => a.Name == "instagramLink").First().Value = instagramLink;
+            else
+                dbContext.Settings.Add(new Settings() { Name = "instagramLink", Value = instagramLink });
+        }
+
+        dbContext.SaveChanges();
+
+        dialog.Close(DialogResult.Ok(true));
+    }
+    void Cancel() => dialog.Cancel();
+}

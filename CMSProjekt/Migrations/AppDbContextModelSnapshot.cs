@@ -25,6 +25,10 @@ namespace CMSProjekt.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Salt")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Login");
 
                     b.ToTable("Accounts");
@@ -38,7 +42,9 @@ namespace CMSProjekt.Migrations
 
                     b.Property<string>("Caption")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
 
                     b.Property<byte[]>("Data")
                         .IsRequired()
@@ -46,6 +52,10 @@ namespace CMSProjekt.Migrations
 
                     b.Property<int>("ElementId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -63,7 +73,9 @@ namespace CMSProjekt.Migrations
 
                     b.Property<string>("Caption")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
 
                     b.Property<byte[]>("Data")
                         .IsRequired()
@@ -131,10 +143,6 @@ namespace CMSProjekt.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Value")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -152,7 +160,9 @@ namespace CMSProjekt.Migrations
 
                     b.Property<string>("Caption")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
 
                     b.Property<string>("ContentJSON")
                         .IsRequired()
