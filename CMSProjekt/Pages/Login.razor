@@ -12,7 +12,7 @@
 @page "/admin/login/XDDDDDDDDDDD"
 
 <MudTextField @bind-Value="@login" @ref="@loginField" Label="Login" Variant="Variant.Outlined" />
-<MudTextField @bind-Value="@password" @ref="@passwordField" Label="Hasło" Variant="Variant.Outlined" />
+<MudTextField @bind-Value="@password" @ref="@passwordField" InputType="InputType.Password" Label="Hasło" Variant="Variant.Outlined" />
 <MudButton OnClick="SignIn">
     Zaloguj
 </MudButton>

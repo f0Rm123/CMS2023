@@ -24,7 +24,7 @@
             <MudIconButton Title="Ustawienia" Icon="@Icons.Material.Filled.Settings" Edge="Edge.Start" OnClick="@ShowSettingsDialog" />
             <MudIconButton Title="Wyloguj" Icon="@Icons.Material.Filled.Logout" Edge="Edge.Start" OnClick="@Logout" />
         }
-        <MudIconButton Title="DarkMode" Icon="@Icons.Material.Filled.DarkMode" Edge="Edge.Start" OnClick="@DarkModeToggle" />
+        @* <MudIconButton Title="DarkMode" Icon="@Icons.Material.Filled.DarkMode" Edge="Edge.Start" OnClick="@DarkModeToggle" /> *@
     </MudAppBar>
 
     <MudDrawer @bind-Open="@drawerOpen" ClipMode="DrawerClipMode.Never" Breakpoint="Breakpoint.Md">

@@ -3,6 +3,7 @@
 @using Microsoft.EntityFrameworkCore;
 @inject AppDbContext dbContext
 @inject IDialogService dialogService
+@inject NavigationManager navManager
 
 <MudCard Style="width:240px" Elevation="3">
     <MudCardContent Style="background-color:var(--mud-palette-primary);min-height:3rem;max-height:3rem;padding:9px 0;text-align:center;">
@@ -112,7 +113,7 @@
         var dialog = await dialogService.ShowAsync<AddPageDialog>("Dodawanie strony");
         var result = await dialog.Result;
         if (!result.Cancelled)
-            StateHasChanged();
+            Refresh();
     }
 
     private async Task ShowEditPage(int id)
@@ -138,7 +139,13 @@
             dbContext.Pages.Where(a => a.ParentPageId == id).ExecuteDelete();
             dbContext.Pages.Where(a => a.Id == id).ExecuteDelete();
             dbContext.SaveChanges();
+            Refresh();
         }
+    }
+
+    void Refresh()
+    {
+        navManager.NavigateTo(navManager.Uri, true);
     }
 
     private void ToggleNavMenu()

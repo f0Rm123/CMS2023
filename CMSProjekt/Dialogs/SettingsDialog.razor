@@ -7,14 +7,14 @@
         <MudText Typo="Typo.h6">Edytuj ustawienia główne strony</MudText>
     </TitleContent>
     <DialogContent>
-        <MudColorPicker Label="Wybierz kolor motywu" @bind-Text="@themePrimaryColor" Style="@($"color:{themePrimaryColor};")" />
+        <MudColorPicker Label="Wybierz kolor motywu" @bind-Text="@themePrimaryColor" Variant="Variant.Outlined" Style="@($"color: {themePrimaryColor};")" />
         <MudTextField @bind-Value="@pageTitle" Label="Tytuł strony widoczny na banerze" Variant="Variant.Outlined" />
         <MudTextField @bind-Value="@facebookLink" Label="Link do Facebooka" Variant="Variant.Outlined" />
         <MudTextField @bind-Value="@instagramLink" Label="Link do Instagrama" Variant="Variant.Outlined" />
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Color="Color.Error"></MudButton>
-        <MudButton Color="Color.Primary" OnClick="Submit"></MudButton>
+        <MudButton OnClick="Cancel" Color="Color.Error" Variant="Variant.Outlined">Odrzuć</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Variant="Variant.Filled">Zapisz</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -30,7 +30,6 @@
 
     protected override void OnInitialized()
     {
-        base.OnInitialized();
         themePrimaryColor = theme.Palette.Primary.ToString();
 
         if (dbContext.Settings.Select(a => a.Name).Contains("pageTitle"))
@@ -92,5 +91,6 @@
 
         dialog.Close(DialogResult.Ok(true));
     }
+
     void Cancel() => dialog.Cancel();
 }

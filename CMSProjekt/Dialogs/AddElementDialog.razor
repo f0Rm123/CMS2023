@@ -12,7 +12,7 @@
                 
                 <MudTabPanel Text="Tekst">
                     <MudTextField @bind-Value="@textFieldText" @ref="@textTextFieldObject" ErrorText="Wprowadzony tekst nie może być pusty i musi być prawidłowy" Label="Podaj tekst" Variant="Variant.Outlined" />
-                    <MudColorPicker Label="Wybierz kolor tekstu" @bind-Text="@textColorValue" Style="@($"color: {textColorValue};")" />
+                    <MudColorPicker Label="Wybierz kolor tekstu" @bind-Text="@textColorValue" Style="@($"color:{textColorValue};")" Variant="Variant.Outlined" />
                     <MudCheckBox @bind-Checked="@isBoldChecked" Label="Czy pogrubiony" />
                 </MudTabPanel>
 

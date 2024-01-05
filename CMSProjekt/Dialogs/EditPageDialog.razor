@@ -20,8 +20,8 @@
         <MudCheckBox @bind-Checked="@isVisible" Label="Czy widoczna dla użytkowników" />
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Color="Color.Error">Anuluj</MudButton>
-        <MudButton Color="Color.Primary" OnClick="Submit">Akceptuj zmiany</MudButton>
+        <MudButton OnClick="Cancel" Color="Color.Error" Variant="Variant.Outlined">Anuluj</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Variant="Variant.Filled">Akceptuj zmiany</MudButton>
     </DialogActions>
 </MudDialog>
 @code {
