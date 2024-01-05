@@ -84,7 +84,7 @@
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
-    List<Models.Page> pages;
+    IEnumerable<Models.Page> pages;
 
     protected override void OnInitialized()
     {
@@ -98,9 +98,9 @@
             isAdmin = authenticationState.User.Identity.IsAuthenticated;
 
         if (isAdmin)
-            pages = new List<Models.Page>(dbContext.Pages);
+            pages = dbContext.Pages;
         else
-            pages = new List<Models.Page>(dbContext.Pages.Where(a => a.Visible));
+            pages = dbContext.Pages.Where(a => a.Visible);
 
         if (dbContext.Settings.Select(a => a.Name).Contains("pageTitle"))
             pageTitle = dbContext.Settings.Where(a => a.Name == "pageTitle").First().Value;
@@ -113,7 +113,7 @@
         var dialog = await dialogService.ShowAsync<AddPageDialog>("Dodawanie strony");
         var result = await dialog.Result;
         if (!result.Cancelled)
-            Refresh();
+            StateHasChanged();
     }
 
     private async Task ShowEditPage(int id)
@@ -139,13 +139,8 @@
             dbContext.Pages.Where(a => a.ParentPageId == id).ExecuteDelete();
             dbContext.Pages.Where(a => a.Id == id).ExecuteDelete();
             dbContext.SaveChanges();
-            Refresh();
+            StateHasChanged();
         }
-    }
-
-    void Refresh()
-    {
-        navManager.NavigateTo(navManager.Uri, true);
     }
 
     private void ToggleNavMenu()
