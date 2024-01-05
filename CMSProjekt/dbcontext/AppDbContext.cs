@@ -13,7 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<Image> Images { get; set; }
     public DbSet<Models.File> Files { get; set; }
     public DbSet<Table> Tables { get; set; }
-    public DbSet<Accounts> Accounts { get; set; }
+    public DbSet<Account> Account { get; set; }
     public DbSet<Settings> Settings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

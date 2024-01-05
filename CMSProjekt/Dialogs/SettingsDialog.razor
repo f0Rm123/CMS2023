@@ -22,7 +22,7 @@
     [CascadingParameter]
     MudDialogInstance dialog { get; set; }
     [Parameter, EditorRequired]
-    public MudThemeProvider themeProvider { get; set; }
+    public MudTheme theme { get; set; }
     public string pageTitle { get; set; }
     public string facebookLink { get; set; }
     public string instagramLink { get; set; }
@@ -31,7 +31,7 @@
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        themePrimaryColor = themeProvider.Theme.Palette.Primary.ToString();
+        themePrimaryColor = theme.Palette.Primary.ToString();
 
         if (dbContext.Settings.Select(a => a.Name).Contains("pageTitle"))
             pageTitle = dbContext.Settings.Where(a => a.Name == "pageTitle").Select(a => a.Value).First();
@@ -54,11 +54,11 @@
         var existingSettings = dbContext.Settings.Select(a => a.Name);
         if(!string.IsNullOrEmpty(themePrimaryColor))
         {
-            themeProvider.Theme.Palette = new()
+            theme.Palette = new()
             {
                 Primary = themePrimaryColor
             };
-            themeProvider.Theme.PaletteDark = new()
+            theme.PaletteDark = new()
             {
                 Primary = themePrimaryColor
             };

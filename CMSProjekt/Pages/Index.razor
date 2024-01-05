@@ -8,6 +8,7 @@
 @inject AppDbContext dbContext
 @inject NavigationManager navManager
 @inject IDialogService dialogService
+@inject ISnackbar snackbar
 @implements IDisposable
 
 @page "/"
@@ -78,15 +79,21 @@ else if(pageExists)
                         throw new Exception("Nieznany element");
                     }
 
-                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Info" Style="max-height: 45px; max-width: 45px" OnClick="() => MoveElementUpDialog(element)"/>
-                    <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Info" Style="max-height: 45px; max-width: 45px" OnClick="() => MoveElementDownDialog(element)"/>
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Style="max-height: 45px; max-width: 45px" OnClick="() => ShowDeleteElementDialog(element)" />
+                    @if(isAdmin)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Info" Style="max-height: 45px; max-width: 45px" OnClick="() => MoveElementUpDialog(element)"/>
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Info" Style="max-height: 45px; max-width: 45px" OnClick="() => MoveElementDownDialog(element)"/>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Style="max-height: 45px; max-width: 45px" OnClick="() => ShowDeleteElementDialog(element)" />
+                    }
                 </MudStack>
             }
         </MudStack>
 
     }
-    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" OnClick="ShowAddElementDialog">Dodaj element</MudButton>
+    @if(isAdmin)
+    {
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" OnClick="ShowAddElementDialog">Dodaj element</MudButton>
+    }
 }
 else
 {
@@ -95,6 +102,8 @@ else
 }
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
     [Parameter]
     public string PagePath { get; set; }
     private string pageTitle = string.Empty;
@@ -103,6 +112,7 @@ else
     private bool startPage = false;
     private ICollection<PageElement> pageElements;
     private int NotFoundFaceSize = 25;
+    private bool isAdmin = false;
     private string NotFoundFaceStyle
     {
         get
@@ -116,6 +126,17 @@ else
         base.OnInitialized();
         UpdatePage();
         navManager.LocationChanged += UpdatePage;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await authenticationStateTask;
+        var userIdentity = authState.User.Identity;
+        
+        if(userIdentity is not null)
+            isAdmin = userIdentity.IsAuthenticated;
+        else
+            isAdmin = false;
     }
 
     protected override void OnAfterRender(bool firstRender)

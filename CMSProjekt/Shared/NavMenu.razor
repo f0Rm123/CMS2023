@@ -67,30 +67,40 @@
             }
         }
     }
-    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" OnClick="ShowAddPageDialog">Dodaj stronę</MudButton>
+    @if(isAdmin)
+    {
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" OnClick="ShowAddPageDialog">Dodaj stronę</MudButton>
+    }
 </MudNavMenu>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
     private int number = 0;
     private bool collapseNavMenu = true;
     string pageTitle = string.Empty;
-    bool isAdmin = true;
+    bool isAdmin = false;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
-    IEnumerable<Models.Page> pages;
+    List<Models.Page> pages;
 
     protected override void OnInitialized()
     {
-        base.OnInitialized();
-        if(isAdmin)
-        {
-            pages = dbContext.Pages;
-        }
+        pages = new List<Models.Page>(dbContext.Pages.Where(a => a.Visible));
+    }
+
+    protected async override Task OnInitializedAsync()
+    {
+        var authenticationState = await authenticationStateTask;
+        if(authenticationState.User.Identity is not null)
+            isAdmin = authenticationState.User.Identity.IsAuthenticated;
+
+        if (isAdmin)
+            pages = new List<Models.Page>(dbContext.Pages);
         else
-        {
-            pages = dbContext.Pages.Where(a => a.Visible);
-        }
+            pages = new List<Models.Page>(dbContext.Pages.Where(a => a.Visible));
+
         if (dbContext.Settings.Select(a => a.Name).Contains("pageTitle"))
             pageTitle = dbContext.Settings.Where(a => a.Name == "pageTitle").First().Value;
         else

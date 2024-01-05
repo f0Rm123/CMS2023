@@ -2,7 +2,7 @@
 
 namespace CMSProjekt.Models
 {
-    public class Accounts
+    public class Account
     {
         [Key]
         public string Login { get; set; }
