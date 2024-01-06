@@ -80,7 +80,7 @@ namespace CMSProjekt.Auth
 
         private (Account?, bool) LookUpUser(string login, string password)
         {
-            Account? foundAccount = dbContext.Account.Where(a => a.Login == login).FirstOrDefault();
+            Account? foundAccount = dbContext.Accounts.Where(a => a.Login == login).FirstOrDefault();
             if (foundAccount == null)
                 return (null, false);
 
@@ -91,7 +91,7 @@ namespace CMSProjekt.Auth
                 iterationCount: 100000,
                 numBytesRequested: 256 / 8));
             
-            var result = dbContext.Account.FirstOrDefault(u => login == u.Login && hashedData == u.Password);
+            var result = dbContext.Accounts.FirstOrDefault(u => login == u.Login && hashedData == u.Password);
             
             Account? resultAccount = null;
             if(result is not null)

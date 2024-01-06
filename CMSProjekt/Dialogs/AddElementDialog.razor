@@ -86,6 +86,7 @@
     byte[] bufferFileFile;
     MudFileUpload<IBrowserFile>? imageUploadField;
     MudFileUpload<IBrowserFile>? fileUploadField;
+    readonly int maxFileSize = 31457280;
 
     void Add()
     {
@@ -211,7 +212,7 @@
 
     private async Task UploadImage(IBrowserFile image)
     {
-        if (image.Size >= 31457280)
+        if (image.Size >= maxFileSize)
         {
             imageUploadField.ErrorText = "Plik przekracza 30MB!";
             imageUploadField.Error = true;
@@ -219,7 +220,7 @@
         else
         {
             await using MemoryStream fs = new();
-            await image.OpenReadStream(31457280).CopyToAsync(fs);
+            await image.OpenReadStream(maxFileSize).CopyToAsync(fs);
             bufferImageFile = GetBytes(fs);
             imageFile = image;
         }
@@ -227,7 +228,7 @@
 
     private async Task UploadFile(IBrowserFile file)
     {
-        if (file.Size >= 31457280)
+        if (file.Size >= maxFileSize)
         {
             fileUploadField.ErrorText = "Plik przekracza 30MB!";
             fileUploadField.Error = true;
@@ -235,7 +236,7 @@
         else
         {
             await using MemoryStream fs = new();
-            await file.OpenReadStream(31457280).CopyToAsync(fs);
+            await file.OpenReadStream(maxFileSize).CopyToAsync(fs);
             bufferFileFile = GetBytes(fs);
             fileFile = file;
         }

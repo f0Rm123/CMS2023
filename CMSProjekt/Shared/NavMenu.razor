@@ -82,8 +82,6 @@
     string pageTitle = string.Empty;
     bool isAdmin = false;
 
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
     IEnumerable<Models.Page> pages;
 
     protected override void OnInitialized()
@@ -141,10 +139,5 @@
             dbContext.SaveChanges();
             StateHasChanged();
         }
-    }
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
     }
 }

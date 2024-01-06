@@ -31,7 +31,7 @@ namespace CMSProjekt.Migrations
 
                     b.HasKey("Login");
 
-                    b.ToTable("Account");
+                    b.ToTable("Accounts");
                 });
 
             modelBuilder.Entity("CMSProjekt.Models.File", b =>
