@@ -91,9 +91,7 @@
 
     protected async override Task OnInitializedAsync()
     {
-        var authenticationState = await authenticationStateTask;
-        if(authenticationState.User.Identity is not null)
-            isAdmin = authenticationState.User.Identity.IsAuthenticated;
+        isAdmin = await IsAdminAsync();
 
         if (isAdmin)
             pages = dbContext.Pages;
@@ -106,38 +104,55 @@
             pageTitle = string.Empty;
     }
 
+    async Task<bool> IsAdminAsync()
+    {
+        var authenticationState = await authenticationStateTask;
+        if (authenticationState.User.Identity is not null)
+            return authenticationState.User.Identity.IsAuthenticated;
+        return false;
+    }
+
     private async Task ShowAddPageDialog()
     {
-        var dialog = await dialogService.ShowAsync<AddPageDialog>("Dodawanie strony");
-        var result = await dialog.Result;
-        if (!result.Cancelled)
-            StateHasChanged();
+        if(await IsAdminAsync())
+        {
+            var dialog = await dialogService.ShowAsync<AddPageDialog>("Dodawanie strony");
+            var result = await dialog.Result;
+            if (!result.Canceled)
+                StateHasChanged();
+        }
     }
 
     private async Task ShowEditPage(int id)
     {
-        var parameters = new DialogParameters<EditPageDialog>();
-        parameters.Add("PageId", id);
-        var dialog = await dialogService.ShowAsync<EditPageDialog>("Edytowanie strony", parameters);
-        var result = await dialog.Result;
-        if (!result.Cancelled)
-            StateHasChanged();
+        if(await IsAdminAsync())
+        {
+            var parameters = new DialogParameters<EditPageDialog>();
+            parameters.Add("PageId", id);
+            var dialog = await dialogService.ShowAsync<EditPageDialog>("Edytowanie strony", parameters);
+            var result = await dialog.Result;
+            if (!result.Canceled)
+                StateHasChanged();
+        }
     }
 
     private async Task ShowDeletePage(int id)
     {
-        var parameters = new DialogParameters<SimpleAcceptDialog>();
-        parameters.Add("ContentText", "Czy na pewno chcesz usunąć tę stronę i jeśli ma podstrony, je również?");
-        parameters.Add("AcceptText", "Tak, usuń");
-        parameters.Add("CancelText", "Nie, zachowaj");
-        var dialog = await dialogService.ShowAsync<SimpleAcceptDialog>("Usuwanie strony", parameters);
-        var result = await dialog.Result;
-        if (!result.Cancelled)
+        if(await IsAdminAsync())
         {
-            dbContext.Pages.Where(a => a.ParentPageId == id).ExecuteDelete();
-            dbContext.Pages.Where(a => a.Id == id).ExecuteDelete();
-            dbContext.SaveChanges();
-            StateHasChanged();
+            var parameters = new DialogParameters<SimpleAcceptDialog>();
+            parameters.Add("ContentText", "Czy na pewno chcesz usunąć tę stronę i jeśli ma podstrony, je również?");
+            parameters.Add("AcceptText", "Tak, usuń");
+            parameters.Add("CancelText", "Nie, zachowaj");
+            var dialog = await dialogService.ShowAsync<SimpleAcceptDialog>("Usuwanie strony", parameters);
+            var result = await dialog.Result;
+            if (!result.Canceled)
+            {
+                dbContext.Pages.Where(a => a.ParentPageId == id).ExecuteDelete();
+                dbContext.Pages.Where(a => a.Id == id).ExecuteDelete();
+                dbContext.SaveChanges();
+                StateHasChanged();
+            }
         }
     }
 }

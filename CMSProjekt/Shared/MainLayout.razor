@@ -73,11 +73,15 @@
 
     protected override async Task OnInitializedAsync()
     {
+        isAdmin = await IsAdminAsync();
+    }
+
+    async Task<bool> IsAdminAsync()
+    {
         var authenticationState = await authenticationStateTask;
         if (authenticationState.User.Identity is not null)
-            isAdmin = authenticationState.User.Identity.IsAuthenticated;
-        else
-            isAdmin = false;
+            return authenticationState.User.Identity.IsAuthenticated;
+        return false;
     }
 
     async Task Logout()
@@ -104,13 +108,16 @@
 
     async Task ShowSettingsDialog()
     {
-        var parameters = new DialogParameters<SettingsDialog>();
-        parameters.Add("theme", theme);
-        var dialog = await dialogService.ShowAsync<SettingsDialog>("Zmiana ustawień", parameters);
-        var result = await dialog.Result;
-        if (!result.Cancelled)
+        if(await IsAdminAsync())
         {
-            navManager.NavigateTo(navManager.Uri, true);
+            var parameters = new DialogParameters<SettingsDialog>();
+            parameters.Add("theme", theme);
+            var dialog = await dialogService.ShowAsync<SettingsDialog>("Zmiana ustawień", parameters);
+            var result = await dialog.Result;
+            if (!result.Canceled)
+            {
+                navManager.NavigateTo(navManager.Uri, true);
+            }
         }
     }
 }

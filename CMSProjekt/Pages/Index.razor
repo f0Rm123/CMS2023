@@ -81,8 +81,8 @@ else if(pageExists)
 
                     @if(isAdmin)
                     {
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Info" Style="max-height: 45px; max-width: 45px" OnClick="() => MoveElementUpDialog(element)"/>
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Info" Style="max-height: 45px; max-width: 45px" OnClick="() => MoveElementDownDialog(element)"/>
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Info" Style="max-height: 45px; max-width: 45px" OnClick="() => MoveElementUp(element)"/>
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Info" Style="max-height: 45px; max-width: 45px" OnClick="() => MoveElementDown(element)"/>
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Style="max-height: 45px; max-width: 45px" OnClick="() => ShowDeleteElementDialog(element)" />
                     }
                 </MudStack>
@@ -130,13 +130,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await authenticationStateTask;
-        var userIdentity = authState.User.Identity;
-        
-        if(userIdentity is not null)
-            isAdmin = userIdentity.IsAuthenticated;
-        else
-            isAdmin = false;
+        isAdmin = await IsAdminAsync();
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -146,6 +140,21 @@ else
         {
             navManager.NavigateTo(navManager.BaseUri + "content/" + dbContext.Pages.Where(a => a.Visible).FirstOrDefault().Path);
         }
+    }
+
+    async Task<bool> IsAdminAsync()
+    {
+        var authState = await authenticationStateTask;
+        var userIdentity = authState.User.Identity;
+
+        if (userIdentity is not null)
+            return userIdentity.IsAuthenticated;
+        return false;
+    }
+
+    bool IsAdmin()
+    {
+        return IsAdminAsync().Result;
     }
 
     void UpdatePage(object sender, EventArgs e) => UpdatePage();
@@ -181,56 +190,68 @@ else
 
     async Task ShowAddElementDialog()
     {
-        var parameters = new DialogParameters<AddElementDialog>();
-        parameters.Add("PageId", pageId);
-        var dialog = await dialogService.ShowAsync<AddElementDialog>("Dodawanie elementu", parameters);
-        var result = await dialog.Result;
-        if (!result.Cancelled)
+        if(await IsAdminAsync())
+        {
+            var parameters = new DialogParameters<AddElementDialog>();
+            parameters.Add("PageId", pageId);
+            var dialog = await dialogService.ShowAsync<AddElementDialog>("Dodawanie elementu", parameters);
+            var result = await dialog.Result;
+            if (!result.Canceled)
+                UpdatePage();
+        }
+    }
+
+    void MoveElementUp(PageElement element)
+    {
+        if(IsAdmin())
+        {
+            var pageElementsHigher = pageElements.Where(a => a.OrderNumber < element.OrderNumber);
+            if(pageElementsHigher.Count() > 0)
+            {
+                var elementToSwap = pageElementsHigher.Last();
+                int prevElementOrder = element.OrderNumber;
+                element.OrderNumber = elementToSwap.OrderNumber;
+                elementToSwap.OrderNumber = prevElementOrder;
+            }
+            dbContext.SaveChanges();
             UpdatePage();
+        }
     }
 
-    void MoveElementUpDialog(PageElement element)
+    void MoveElementDown(PageElement element)
     {
-        var pageElementsHigher = pageElements.Where(a => a.OrderNumber < element.OrderNumber);
-        if(pageElementsHigher.Count() > 0)
+        if(IsAdmin())
         {
-            var elementToSwap = pageElementsHigher.Last();
-            int prevElementOrder = element.OrderNumber;
-            element.OrderNumber = elementToSwap.OrderNumber;
-            elementToSwap.OrderNumber = prevElementOrder;
+            var pageElementsLower = pageElements.Where(a => a.OrderNumber > element.OrderNumber);
+            if (pageElementsLower.Count() > 0)
+            {
+                var elementToSwap = pageElementsLower.First();
+                int prevElementOrder = element.OrderNumber;
+                element.OrderNumber = elementToSwap.OrderNumber;
+                elementToSwap.OrderNumber = prevElementOrder;
+            }
+            dbContext.SaveChanges();
+            UpdatePage();
         }
-        dbContext.SaveChanges();
-        UpdatePage();
-    }
-
-    void MoveElementDownDialog(PageElement element)
-    {
-        var pageElementsLower = pageElements.Where(a => a.OrderNumber > element.OrderNumber);
-        if (pageElementsLower.Count() > 0)
-        {
-            var elementToSwap = pageElementsLower.First();
-            int prevElementOrder = element.OrderNumber;
-            element.OrderNumber = elementToSwap.OrderNumber;
-            elementToSwap.OrderNumber = prevElementOrder;
-        }
-        dbContext.SaveChanges();
-        UpdatePage();
     }
 
     async Task ShowDeleteElementDialog(PageElement element)
     {
-        var parameters = new DialogParameters<SimpleAcceptDialog>();
-        parameters.Add("ContentText", "Czy na pewno chcesz usunąć ten element?");
-        parameters.Add("AcceptText", "Tak, usuń");
-        parameters.Add("CancelText", "Nie, zachowaj");
-        var dialog = await dialogService.ShowAsync<SimpleAcceptDialog>("Usuwanie elementu", parameters);
-        var result = await dialog.Result;
-        if(!result.Cancelled)
+        if(await IsAdminAsync())
         {
-            dbContext.PageElements.Where(a => a.Id == element.Id).ExecuteDelete();
-            dbContext.SaveChanges();
+            var parameters = new DialogParameters<SimpleAcceptDialog>();
+            parameters.Add("ContentText", "Czy na pewno chcesz usunąć ten element?");
+            parameters.Add("AcceptText", "Tak, usuń");
+            parameters.Add("CancelText", "Nie, zachowaj");
+            var dialog = await dialogService.ShowAsync<SimpleAcceptDialog>("Usuwanie elementu", parameters);
+            var result = await dialog.Result;
+            if(!result.Cancelled)
+            {
+                dbContext.PageElements.Where(a => a.Id == element.Id).ExecuteDelete();
+                dbContext.SaveChanges();
+            }
+            UpdatePage();
         }
-        UpdatePage();
     }
 
     private static List<string> GetProperties(string stringData)
