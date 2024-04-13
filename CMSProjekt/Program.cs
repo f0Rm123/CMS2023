@@ -9,7 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddMudServices();
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(@"Data Source=Database/Pages.db"));
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite("Data Source=" + Path.Combine("wwwroot", "Database", "Pages.db")));
 builder.Services.AddScoped<AuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<AuthStateProvider>());
 
